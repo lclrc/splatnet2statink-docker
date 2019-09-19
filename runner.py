@@ -1,14 +1,14 @@
 import os
 import json
-import subprocess
 from subprocess import Popen, PIPE
 import time
 from flask import Flask, stream_with_context, Response
 
 app = Flask(__name__)
-VERSION = "1.3.3"
+VERSION = "1.3.4"
 
 up_time = time.time()
+
 
 def write_config():
     envs_src = ["api_key", "cookie", "session_token", "user_lang"]
@@ -16,9 +16,10 @@ def write_config():
     envs_available = any(envs.values())
     if envs_available:
         yield ('#Start Update config.txt')
-        with open('config.txt', 'w') as file:
+        with open('./splatnet2statink/config.txt', 'w') as file:
             file.write(json.dumps(envs))
         yield ('#Done Update config.txt')
+
 
 def update_submodules():
     yield ("#Start Update git submodules")
@@ -37,6 +38,7 @@ def sync_battle():
     with Popen(args, stdout=PIPE, encoding="utf8") as proc:
         yield proc.stdout.read()
     yield ('#Done Run {}'.format(args))
+
 
 def sync_salmon():
     salmon_args = ["python", "./splatnet2statink/splatnet2statink.py", "--salmon", "-r"]
@@ -68,17 +70,20 @@ def sync_all():
     elapsed = time.time() - start
     yield ("elapsed_time: {}".format(elapsed))
 
+
 # ジェネレータの値をプリントしてから返す
 def yield_insert_debug(func, sep="\n"):
     for log in func():
         print(log)
         yield log + sep
 
+
 ########## Flask Response ##########
 @app.route('/')
 def index():
     elapsed = time.time() - up_time
     return ("OK, up_time: {}".format(elapsed))
+
 
 @app.route('/sync')
 def sync():
@@ -95,7 +100,7 @@ if __name__ == "__main__":
         print("REST API mode. port {} listen ...".format(run_port))
         app.run(debug=debug, host="0.0.0.0", port=run_port, use_reloader=False)
     else:
-        for log in sync_all():
-            print(log)
-
-
+        while True:
+            for log in sync_all():
+                print(log)
+            time.sleep(1800)
